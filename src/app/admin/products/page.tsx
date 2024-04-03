@@ -11,7 +11,16 @@ import {
 } from "@/components/ui/table";
 import db from "@/db/db";
 import { profileEnd } from "console";
-import { CheckCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, MoreVertical, XCircle } from "lucide-react";
+import { formatCurrency, formatNumber } from "@/lib/formatters";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ActiveToggleDropdownItem, DeleteDropdownItem } from "./_components/productActions";
 
 export default async function AdminProductPage() {
   return (
@@ -22,9 +31,8 @@ export default async function AdminProductPage() {
           {/* asChild is neccessity to render this component as link rather button component */}
           <Link href="/admin/products/new">Add new Product</Link>
         </Button>
-        <ProductsTable />
-
       </div>
+      <ProductsTable />
     </>
   );
 }
@@ -40,6 +48,7 @@ async function ProductsTable() {
     },
     orderBy: { name: "asc" },
   });
+  console.log(products);
   // if (products.length === 0) return <p>No products found</p>;
 
   return (
@@ -57,21 +66,58 @@ async function ProductsTable() {
           </TableHead>
         </TableRow>
       </TableHeader>
-      <TableBody>{products.map((product) => (
-        <TableRow key={product.id}>
-          <TableCell>
-            {product.isAvailableForPurchase ? <>
-            <CheckCircle2 />  
-            <span className="sr-only">Available</span>
-            </> : 
-            <>
-             <span className="sr-only">Un Available</span>
-             < XCircle/>  
-             </>
-             }
-          </TableCell>
-        </TableRow>
-      ))}</TableBody>
+      <TableBody>
+        {products.map((product) => (
+          <TableRow key={product.id}>
+            <TableCell>
+              {product.isAvailableForPurchase ? (
+                <>
+                  <CheckCircle2 />
+                  <span className="sr-only">Available</span>
+                </>
+              ) : (
+                <>
+                  <span className="sr-only">Un Available</span>
+                  <XCircle className=" stroke-destructive"/>
+                </>
+              )}
+            </TableCell>
+            <TableCell>{product.name}</TableCell>
+            <TableCell>{formatCurrency(product.priceInCents / 100)}</TableCell>
+            <TableCell>{formatNumber(product._count.order / 100)}</TableCell>
+            <TableCell>
+              <DropdownMenu>
+                <DropdownMenuTrigger>
+                  <MoreVertical />
+                  <span className="sr-only">Actions</span>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem>
+                    {/* if we downloading certain file we have to send it to the api route rather than page so we are useing anchor tag  */}
+
+                    <a download href={`/admin/products/${product.id}/download`}>
+                      {" "}
+                      Download
+                    </a>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href={`/admin/products/${product.id}/edit`}>
+                      {" "}
+                      Download
+                    </Link>
+                  </DropdownMenuItem>
+                  <ActiveToggleDropdownItem
+                    id={product.id}
+                    isAvailableForPurchase={product.isAvailableForPurchase}
+                  />
+                  <DropdownMenuSeparator/>
+                  <DeleteDropdownItem id={product.id} disabled={product._count.order > 0} />
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
     </Table>
   );
 }
