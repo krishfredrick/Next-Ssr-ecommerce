@@ -10,7 +10,7 @@ import { Suspense } from "react";
 const getMostPopularProduct = cache(() => {
   return db.product.findMany({
     where: { isAvailableForPurchase: true },
-    orderBy: { order: { _count: "desc" } },
+    orderBy: { orders: { _count: "desc" } },
     take: 6,
   });
 }, ["/", "getMostPopularProduct"]);

@@ -44,7 +44,7 @@ async function ProductsTable() {
       name: true,
       priceInCents: true,
       isAvailableForPurchase: true,
-      _count: { select: { order: true } },
+      _count: { select: { orders: true } },
     },
     orderBy: { name: "asc" },
   });
@@ -84,7 +84,7 @@ async function ProductsTable() {
             </TableCell>
             <TableCell>{product.name}</TableCell>
             <TableCell>{formatCurrency(product.priceInCents / 100)}</TableCell>
-            <TableCell>{formatNumber(product._count.order / 100)}</TableCell>
+            <TableCell>{formatNumber(product._count.orders / 100)}</TableCell>
             <TableCell>
               <DropdownMenu>
                 <DropdownMenuTrigger>
@@ -111,7 +111,7 @@ async function ProductsTable() {
                     isAvailableForPurchase={product.isAvailableForPurchase}
                   />
                   <DropdownMenuSeparator/>
-                  <DeleteDropdownItem id={product.id} disabled={product._count.order > 0} />
+                  <DeleteDropdownItem id={product.id} disabled={product._count.orders > 0} />
                 </DropdownMenuContent>
               </DropdownMenu>
             </TableCell>

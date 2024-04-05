@@ -1,4 +1,5 @@
 "use client";
+import { userOrderExists } from "@/app/(customerFacing)/_actions/userOrderExists";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -11,6 +12,7 @@ import {
 import { formatCurrency } from "@/lib/formatters";
 import {
   Elements,
+  LinkAuthenticationElement,
   PaymentElement,
   useElements,
   useStripe,
@@ -25,6 +27,7 @@ type CheckoutFormProps = {
     name: string;
     priceInCents: number;
     description: string;
+    id: string;
   };
   clientSecret: string;
 };
@@ -51,40 +54,78 @@ export default function CheckoutForm({
               {formatCurrency(product.priceInCents / 100)}
             </div>
             <h1 className="text-2xl font-bold ">{product.name}</h1>
-            <div className="line-clamp-3 text-muted-foreground"></div>
+            <div className="line-clamp-3 text-muted-foreground">{product.description}</div>
           </div>
         </div>
         <Elements options={{ clientSecret }} stripe={stripePromise}>
-          <Form priceInCents={product.priceInCents} />
+          <Form priceInCents={product.priceInCents} productId={product.id} />
         </Elements>
       </div>
     </>
   );
 }
 
-function Form({ priceInCents }: { priceInCents: number }) {
+function Form({ priceInCents, productId }: { priceInCents: number, productId: string }) {
   const stripe = useStripe();
   const elements = useElements();
   const [isLoading, setIsLoading] = useState(false);
-  async function handleSubmit(e: FormEvent){
-    e.preventDefault()
-    if(stripe == null || elements == null) return;
-    setIsLoading(true)
+  const [errorMessage, setErrorMessage] = useState<string | undefined>();
+  const [email, setEmail] = useState<string>();
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (stripe == null || elements == null || email == null) return;
+    setIsLoading(true);
 
     // Check for existing order
+    const orderExists = await userOrderExists(email, productId);
 
-    stripe.confirmPayment({elements, confirmParams: {
-      return_url: `${process.env.NEXT_STRIPE_PUBLIC_KEY}`
-    }})
+    if(orderExists){
+      setErrorMessage("you have already purchased it try downloading it form my Order page")
+      setIsLoading(false);
+      return
+    }
+
+    const { error } = await stripe.confirmPayment({
+      elements,
+      confirmParams: {
+        return_url: `${process.env.NEXT_PUBLIC_SERVER_URL}/stripe/purchase-success`,
+      },
+    });
+
+    // .then(({ error }) => {
+    //   if (error.type === "card_error" || error.type === "validation_error") {
+    //     setErrorMessage(error?.message);
+    //   } else {
+    //     setErrorMessage("Unknown occurance of error");
+    //   }
+    // });
+
+    if (error.type === "card_error" || error.type === "validation_error") {
+      setErrorMessage(error?.message);
+    } else {
+      setErrorMessage("Unknown occurance of error");
+    }
   }
   return (
     <form onSubmit={handleSubmit}>
       <Card>
         <CardHeader>
           <CardTitle>Checkout</CardTitle>
-          <CardDescription className="text-destructive"> Error</CardDescription>
+          {errorMessage && (
+            <CardDescription className="text-destructive">
+              {" "}
+              {errorMessage}
+            </CardDescription>
+          )}
         </CardHeader>
         <PaymentElement />
+        {/* This will create email input */}
+        <div className="mt-4">
+          <LinkAuthenticationElement
+            onChange={(e) => setEmail(e.value.email)}
+          />
+        </div>
         <CardContent>
           <CardFooter>
             <Button
@@ -92,7 +133,9 @@ function Form({ priceInCents }: { priceInCents: number }) {
               size="lg"
               disabled={stripe == null || elements == null || isLoading}
             >
-              {isLoading ? "Purchasing...": `Purchase -${formatCurrency(priceInCents / 100)}`}
+              {isLoading
+                ? "Purchasing..."
+                : `Purchase -${formatCurrency(priceInCents / 100)}`}
             </Button>
           </CardFooter>
         </CardContent>
